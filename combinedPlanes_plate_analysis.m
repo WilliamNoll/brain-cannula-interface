@@ -142,7 +142,7 @@ switch choice
             [294, 246, 326 - 294, 288 - 246]; % Well 6 85 mg/ml
             };
 
-        sliceX = 102;
+        sliceX = 200;
         userDone = false;
         plane = 2;
         

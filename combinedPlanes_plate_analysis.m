@@ -13,6 +13,8 @@ sagittalWellNumber = 6;
 global artifactPixelIntensities artifactPixelCount artifactRatio meanIntensity stdIntensity;
 artifactPixelIntensities = [];
 artifactPixelCount = 0;
+meanIntensity = 0.320909645909646;
+stdIntensity = 0.004835688973947;
 
 % Load the MRI scan
 Va = niftiread(file);

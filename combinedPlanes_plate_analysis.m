@@ -6,7 +6,7 @@ clc;
 file = 'IMAGES_High_Def_20240227161441_2.nii';
 tolerance = 3; % How many std deviations away from mean to be labeled as an artifact
 
-frontalWellNumber = 4;
+frontalWellNumber = 1;
 sagittalWellNumber = 5;
 
 %% PROGRAM
@@ -15,6 +15,7 @@ artifactPixelIntensities = [];
 artifactPixelCount = 0;
 meanIntensity = 0.320909645909646;
 stdIntensity = 0.004835688973947;
+j = 0;
 
 % Load the MRI scan
 Va = niftiread(file);
@@ -74,7 +75,6 @@ switch choice
         sliceZ = 260;
         userDone = false;
         plane = 1;
-        j = 1;
 
         while ~userDone
         % Ensure all GUI components are set up correctly
@@ -104,11 +104,16 @@ switch choice
         clc;
 
         horizontal = Va_prime(:,:,finalslice);
+        pixelCountPlaceHolder = artifactPixelCount;
 
         % Process well
         wellRect = frontalWellCoords{frontalWellNumber};
         processWell(imrotate(horizontal, -90), wellRect, totalPixels, tolerance, newPosition, frontalWellNumber);
         uiwait(gcf)
+        
+        if(artifactPixelCount) > pixelCountPlaceHolder
+            j = j+1;
+        end
 
         fprintf("Slice %d\n", finalslice)
 
@@ -120,7 +125,6 @@ switch choice
         switch choice
             case 'Yes'
                 userDone = false;
-                j = j+1;
             case 'No'
                 userDone = true;
             otherwise
@@ -150,7 +154,6 @@ switch choice
         sliceX = 200;
         userDone = false;
         plane = 2;
-        j = 1;
         
         while ~userDone
         % Ensure all GUI components are set up correctly
@@ -180,11 +183,17 @@ switch choice
         clc;
 
         horizontal = reshape(Va_prime(finalslice,:,:), [dim(2) dim(3)]);
+        pixelCountPlaceHolder = artifactPixelCount;
+
 
         % Process well
         wellRect = sagittalWellCoords{sagittalWellNumber};
         processWell(horizontal, wellRect, totalPixels, tolerance, newPosition, sagittalWellNumber);
         uiwait(gcf)
+        
+        if(artifactPixelCount) > pixelCountPlaceHolder
+            j = j+1;
+        end
 
         fprintf("Slice %d", finalslice)
 
@@ -196,7 +205,6 @@ switch choice
     switch choice
         case 'Yes'
             userDone = false;
-            j = j+1;
         case 'No'
             userDone = true;
         otherwise

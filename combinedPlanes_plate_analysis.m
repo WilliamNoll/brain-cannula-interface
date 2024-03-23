@@ -130,6 +130,7 @@ switch choice
          clc;
          meanArtifactIntensity = mean(artifactPixelIntensities);
          fprintf('Mean artifact intensity: %f\n', meanArtifactIntensity);
+         fprintf('Number of Pixels: %f\n', artifactPixelCount);
 
     case 2
         % Code for Sagittal
@@ -138,7 +139,7 @@ switch choice
             [104, 246, 144 - 104, 288 - 246]; % Well 2 17 mg/ml
             [156, 246, 187 - 156, 288 - 246]; % Well 3 34 mg/ml
             [198, 246, 234 - 198, 289 - 246]; % Well 4 51 mg/ml
-            [249, 246, 279 - 249, 288 - 246]; % Well 5 68 mg/ml
+            [249, 246, 279 - 249, 293 - 246]; % Well 5 68 mg/ml
             [294, 246, 326 - 294, 288 - 246]; % Well 6 85 mg/ml
             };
 
@@ -200,6 +201,8 @@ switch choice
         end
 clc;
 meanArtifactIntensity = mean(artifactPixelIntensities);
+
+fprintf('Number of Pixels: %d\n', artifactPixelCount);
 fprintf('Mean artifact intensity: %f\n', meanArtifactIntensity);
 
     case 3

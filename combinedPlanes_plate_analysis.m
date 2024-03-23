@@ -7,7 +7,7 @@ file = 'IMAGES_High_Def_20240227161441_2.nii';
 tolerance = 3; % How many std deviations away from mean to be labeled as an artifact
 
 frontalWellNumber = 1;
-sagittalWellNumber = 1;
+sagittalWellNumber = 6;
 
 %% PROGRAM
 global artifactPixelIntensities artifactPixelCount artifactRatio meanIntensity stdIntensity;
@@ -64,12 +64,12 @@ switch choice
     case 1
         % Code for Frontal
         frontalWellCoords = {
-            [297, 247, 331 - 297, 292- 247]; % Well 1
-            [343, 247, 380 - 343, 289 - 247]; % Well 2
-            [388, 247, 425 - 388, 289 - 247]; % Well 3
-            [434, 247, 472 - 434, 287 - 247]; % Well 4
+            [297, 247, 331 - 297, 293- 247]; % Well 1
+            [343, 247, 380 - 343, 293 - 247]; % Well 2
+            [388, 247, 425 - 388, 293 - 247]; % Well 3
+            [434, 247, 472 - 434, 293 - 247]; % Well 4
             };
-        sliceZ = dim(3)/2;
+        sliceZ = 310;
         userDone = false;
         plane = 1;
 

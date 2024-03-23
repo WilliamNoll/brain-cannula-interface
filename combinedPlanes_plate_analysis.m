@@ -122,7 +122,6 @@ switch choice
             otherwise
                 userDone = true;
         end
-        clc;
         sliceZ = finalslice;
 
          end
@@ -196,7 +195,6 @@ switch choice
     end
 
     sliceX = finalslice;
-    clc;
         end
 
 meanArtifactIntensity = mean(artifactPixelIntensities);

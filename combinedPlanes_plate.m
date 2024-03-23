@@ -4,11 +4,15 @@ clc;
 
 %% USER INPUTS
 file = 'IMAGES_High_Def_20240227161441_2.nii';
-tolerance = 5; % How many std deviations away from mean to be labeled as an artifact
+tolerance = 3; % How many std deviations away from mean to be labeled as an artifact
+
+frontalWellNumber = 3;
+sagittalWellNumber = 1;
 
 %% PROGRAM
-% Global variables
-global artifactRatio meanIntensity stdIntensity;
+global artifactPixelIntensities artifactPixelCount artifactRatio meanIntensity stdIntensity;
+artifactPixelIntensities = [];
+artifactPixelCount = 0;
 
 % Load the MRI scan
 Va = niftiread(file);
@@ -59,77 +63,31 @@ end
 switch choice
     case 1
         % Code for Frontal
-        % Initial sliceZ value
+        frontalWellCoords = {
+            [297, 247, 331 - 297, 292- 247]; % Well 1
+            [343, 247, 380 - 343, 289 - 247]; % Well 2
+            [388, 247, 425 - 388, 289 - 247]; % Well 3
+            [434, 247, 472 - 434, 287 - 247]; % Well 4
+            };
         sliceZ = dim(3)/2;
+        userDone = false;
+        plane = 1;
 
+         while ~userDone
         % Ensure all GUI components are set up correctly
         hFig = figure('Name', 'MRI Slice Viewer', 'NumberTitle', 'off');
-        userData = struct('currentSlice', sliceZ, 'Va_prime', Va_prime, 'finalslice', []);
         set(hFig, 'Position', newPosition); % Make the figure full screen
-        set(hFig, 'UserData', userData);
+        set(hFig, 'UserData', struct('currentSlice', sliceZ, 'Va_prime', Va_prime));
+
         % Adjust slider setup
         hSlider = uicontrol('Style', 'slider', 'Min',1, 'Max',size(Va_prime,3), 'Value',sliceZ, 'SliderStep', [1 10]./(size(Va_prime,3)-1), ...
-            'Position', [20 20 300 20], 'Callback', @(src, evnt)displaySliceCallback(hFig, round(src.Value), dim, choice));
+            'Position', [20 20 300 20], 'Callback', @(src, evnt)displaySliceCallback(hFig, round(src.Value), dim, plane));
 
         % Add an event listener for mouse scroll wheel that updates the current slice
-        set(hFig, 'WindowScrollWheelFcn', @(src, event) scrollWheelCallback(src, event, hSlider, choice));
+        set(hFig, 'WindowScrollWheelFcn', @(src, event) scrollWheelCallback(src, event, hSlider, plane));
 
         % Immediately display the initial slice
-        displaySlice(hFig, sliceZ, dim, choice); % This line ensures the initial slice is displayed
-
-        % Button for processing the currently viewed slice and disabling the slider
-        hButtonProcess = uicontrol('Style', 'pushbutton', 'String', 'Save Slice & Process', 'Position', [440 20 150 30], 'Callback', ...
-             @(src, event)processCurrentSlice(hFig));
-
-        % Pause script execution waiting for user to select the slice and process it
-        uiwait(hFig);
-        userData = get(hFig, 'UserData');
-        finalslice = userData.finalslice; % Get the finalslice from UserData
-        close(hFig);
-        
-        % Display the horizontal slice and allow user to draw a freehand ROI for normal brain tissue
-        horizontal = Va_prime(:,:,finalslice);
-        ROIfig = figure();
-        imshow(imrotate(horizontal, -90));
-        set(ROIfig, 'Position', newPosition); % Make the figure full screen
-        title('Draw around normal brain tissue');
-        
-        % Let user draw the initial region
-        hFreehandNormal = drawfreehand('Color', 'r');
-
-        % Create a button to process the normal brain tissue ROI after drawing
-        hButton = uicontrol('Style', 'pushbutton', 'String', 'Process', ...
-            'Position', [20 20 100 30], 'Callback', {@processNormalROICallback, imrotate(horizontal,-90), ROIfig, totalPixels, tolerance, newPosition} );
-
-        % Store hFreehandNormal in the UserData property of the figure or button
-        set(hButton, 'UserData', hFreehandNormal);
-        uiwait(gcf)
-
-        % Add a listener to the freehand object to close the figure when the ROI is drawn
-        if isvalid(hFreehandNormal)
-            addlistener(hFreehandNormal, 'ROIMoved', @(src, evnt) closeDrawROIFigure(src));
-        end
-
-        fprintf('Frontal Plane (Slice %d)\nArtifact ratio: %4f (artifact pixels/total image kilopixels)\n', finalslice, artifactRatio)
-    case 2
-        % Code for Sagittal
-        % Initial sliceX value
-        sliceX = 102;
-
-        % Ensure all GUI components are set up correctly
-        hFig = figure('Name', 'MRI Slice Viewer', 'NumberTitle', 'off');
-        set(hFig, 'Position', newPosition); % Make the figure full screen
-        set(hFig, 'UserData', struct('currentSlice', sliceX, 'Va_prime', Va_prime));
-
-        % Adjust slider setup
-        hSlider = uicontrol('Style', 'slider', 'Min',1, 'Max',size(Va_prime,1), 'Value',sliceX, 'SliderStep', [1 10]./(size(Va_prime,3)-1), ...
-            'Position', [20 20 300 20], 'Callback', @(src, evnt)displaySliceCallback(hFig, round(src.Value), dim, choice));
-
-        % Add an event listener for mouse scroll wheel that updates the current slice
-        set(hFig, 'WindowScrollWheelFcn', @(src, event) scrollWheelCallback(src, event, hSlider, choice));
-
-        % Immediately display the initial slice
-        displaySlice(hFig, sliceX, dim, choice); % This line ensures the initial slice is displayed
+        displaySlice(hFig, sliceZ, dim, plane); % This line ensures the initial slice is displayed
 
         % Button for processing the currently viewed slice and disabling the slider
         hButtonProcess = uicontrol('Style', 'pushbutton', 'String', 'Save Slice & Process', 'Position', [440 20 150 30], ...
@@ -140,36 +98,117 @@ switch choice
         userData = get(hFig, 'UserData');
         finalslice = userData.finalslice; % Get the finalslice from UserData
         close(hFig);
+        clc;
+
+        horizontal = Va_prime(:,:,finalslice);
+
+        % Process well
+        wellRect = frontalWellCoords{frontalWellNumber};
+        processWell(imrotate(horizontal, -90), wellRect, totalPixels, tolerance, newPosition, frontalWellNumber);
+        uiwait(gcf)
+
+        fprintf("Slice %d\n", finalslice)
+
+        choice = questdlg('Do you want to process another slice?', ...
+        'Continue Processing', ...
+        'Yes', 'No', 'Yes');
+
+        % Handle the user's choice
+        switch choice
+            case 'Yes'
+                userDone = false;
+            case 'No'
+                userDone = true;
+            otherwise
+                userDone = true;
+        end
+        clc;
+        sliceZ = finalslice;
+
+         end
+
+         meanArtifactIntensity = mean(artifactPixelIntensities);
+         fprintf('Mean artifact intensity: %f\n', meanArtifactIntensity);
+
+    case 2
+        % Code for Sagittal
+        sagittalWellCoords = {
+            [58, 246, 95 - 55, 288 - 246];    % Well 1  0 mg/ml
+            [104, 246, 144 - 104, 288 - 246]; % Well 2 17 mg/ml
+            [156, 246, 187 - 156, 288 - 246]; % Well 3 34 mg/ml
+            [198, 246, 234 - 198, 289 - 246]; % Well 4 51 mg/ml
+            [249, 246, 279 - 249, 288 - 246]; % Well 5 68 mg/ml
+            [294, 246, 326 - 294, 288 - 246]; % Well 6 85 mg/ml
+            };
+
+        sliceX = 102;
+        userDone = false;
+        plane = 2;
+        
+        while ~userDone
+        % Ensure all GUI components are set up correctly
+        hFig = figure('Name', 'MRI Slice Viewer', 'NumberTitle', 'off');
+        set(hFig, 'Position', newPosition); % Make the figure full screen
+        set(hFig, 'UserData', struct('currentSlice', sliceX, 'Va_prime', Va_prime));
+
+        % Adjust slider setup
+        hSlider = uicontrol('Style', 'slider', 'Min',1, 'Max',size(Va_prime,1), 'Value',sliceX, 'SliderStep', [1 10]./(size(Va_prime,3)-1), ...
+            'Position', [20 20 300 20], 'Callback', @(src, evnt)displaySliceCallback(hFig, round(src.Value), dim, plane));
+
+        % Add an event listener for mouse scroll wheel that updates the current slice
+        set(hFig, 'WindowScrollWheelFcn', @(src, event) scrollWheelCallback(src, event, hSlider, plane));
+
+        % Immediately display the initial slice
+        displaySlice(hFig, sliceX, dim, plane); % This line ensures the initial slice is displayed
+
+        % Button for processing the currently viewed slice and disabling the slider
+        hButtonProcess = uicontrol('Style', 'pushbutton', 'String', 'Save Slice & Process', 'Position', [440 20 150 30], ...
+            'Callback', @(src, evnt)processCurrentSlice(hFig));
+
+        % Pause script execution waiting for user to select the slice and process it
+        uiwait(hFig);
+        userData = get(hFig, 'UserData');
+        finalslice = userData.finalslice; % Get the finalslice from UserData
+        close(hFig);
+        clc;
 
         horizontal = reshape(Va_prime(finalslice,:,:), [dim(2) dim(3)]);
 
-        % Display the horizontal slice and allow user to draw a freehand ROI for normal brain tissue
-        ROIfig = figure();
-        imshow(horizontal, [0 0.1]);
-        set(ROIfig, 'Position', newPosition); % Make the figure full screen
-        title('Draw around normal brain tissue');
-        % Let user draw the initial region
-        hFreehandNormal = drawfreehand('Color', 'r');
-
-        % Create a button to process the normal brain tissue ROI after drawing
-        hButton = uicontrol('Style', 'pushbutton', 'String', 'Process', ...
-            'Position', [20 20 100 30], 'Callback', {@processNormalROICallback, horizontal, ROIfig, totalPixels, tolerance, newPosition});
-
-        % Store hFreehandNormal in the UserData property of the figure or button
-        set(hButton, 'UserData', hFreehandNormal);
+        % Process well
+        wellRect = sagittalWellCoords{sagittalWellNumber};
+        processWell(horizontal, wellRect, totalPixels, tolerance, newPosition, sagittalWellNumber);
         uiwait(gcf)
 
-        % Add a listener to the freehand object to close the figure when the ROI is drawn
-        if isvalid(hFreehandNormal)
-            addlistener(hFreehandNormal, 'ROIMoved', @(src, evnt) closeDrawROIFigure(src));
+        fprintf("Slice %d", finalslice)
+
+        choice = questdlg('Do you want to process another slice?', ...
+        'Continue Processing', ...
+        'Yes', 'No', 'Yes');
+    
+    % Handle the user's choice
+    switch choice
+        case 'Yes'
+            userDone = false;
+        case 'No'
+            userDone = true;
+        otherwise
+            userDone = true;
+    end
+
+    sliceX = finalslice;
+    clc;
         end
 
-        fprintf('Sagittal Plane (Slice %d)\nArtifact ratio: %4f (artifact pixels/total image kilopixels)\n', finalslice, artifactRatio)
+meanArtifactIntensity = mean(artifactPixelIntensities);
+fprintf('Mean artifact intensity: %f\n', meanArtifactIntensity);
+
     case 3
         % Code for Horizontal
-        % Initial sliceY value
         sliceY = 285;
+        userDone = false;
+        plane = 3;
 
+     while ~userDone
         % Ensure all GUI components are set up correctly
         hFig = figure('Name', 'MRI Slice Viewer', 'NumberTitle', 'off');
         set(hFig, 'Position', newPosition); % Make the figure full screen
@@ -177,13 +216,13 @@ switch choice
 
         % Adjust slider setup
         hSlider = uicontrol('Style', 'slider', 'Min',1, 'Max',size(Va_prime,1), 'Value',sliceY, 'SliderStep', [1 10]./(size(Va_prime,3)-1), ...
-            'Position', [20 20 300 20], 'Callback', @(src, evnt)displaySliceCallback(hFig, round(src.Value), dim, choice));
+            'Position', [20 20 300 20], 'Callback', @(src, evnt)displaySliceCallback(hFig, round(src.Value), dim, plane));
 
         % Add an event listener for mouse scroll wheel that updates the current slice
-        set(hFig, 'WindowScrollWheelFcn', @(src, event) scrollWheelCallback(src, event, hSlider, choice));
+        set(hFig, 'WindowScrollWheelFcn', @(src, event) scrollWheelCallback(src, event, hSlider, plane));
 
         % Immediately display the initial slice
-        displaySlice(hFig, sliceY, dim, choice); % This line ensures the initial slice is displayed
+        displaySlice(hFig, sliceY, dim, plane); % This line ensures the initial slice is displayed
 
         % Button for processing the currently viewed slice and disabling the slider
         hButtonProcess = uicontrol('Style', 'pushbutton', 'String', 'Save Slice & Process', 'Position', [440 20 150 30], ...
@@ -197,31 +236,59 @@ switch choice
 
         horizontal = reshape(Va_prime(:,finalslice,:), [dim(1) dim(3)]);
 
-        % Display the horizontal slice and allow user to draw a freehand ROI for normal brain tissue
-        ROIfig = figure();
-        imshow(imrotate(horizontal, 90));
-        set(ROIfig, 'Position', newPosition); % Make the figure full screen
-        title('Draw around normal brain tissue');
-        % Let user draw the initial region
-        hFreehandNormal = drawfreehand('Color', 'r');
-
-        % Create a button to process the normal brain tissue ROI after drawing
-        hButton = uicontrol('Style', 'pushbutton', 'String', 'Process', ...
-            'Position', [20 20 100 30], 'Callback', {@processNormalROICallback, imrotate(horizontal,90), ROIfig, totalPixels, tolerance, newPosition});
-
-        % Store hFreehandNormal in the UserData property of the figure or button
-        set(hButton, 'UserData', hFreehandNormal);
+         % Process well
+        wellRect = sagittalWellCoords{sagittalWellNumber};
+        processWell(horizontal, wellRect, totalPixels, tolerance, newPosition, sagittalWellNumber);
         uiwait(gcf)
 
-        % Add a listener to the freehand object to close the figure when the ROI is drawn
-        if isvalid(hFreehandNormal)
-            addlistener(hFreehandNormal, 'ROIMoved', @(src, evnt) closeDrawROIFigure(src));
-        end
+        choice = questdlg('Do you want to process another slice?', ...
+        'Continue Processing', ...
+        'Yes', 'No', 'Yes');
+    
+    % Handle the user's choice
+    switch choice
+        case 'Yes'
+            userDone = false;
+        case 'No'
+            userDone = true;
+        otherwise
+            userDone = true;
+    end
+     end
 
-        fprintf('Horizontal Plane (Slice %d)\nArtifact ratio: %4f (artifact pixels/total image kilopixels)\n', finalslice, artifactRatio)
     case 4
     otherwise
         % Handle no selection or cancellation
+end
+
+function processWell(imageSlice, wellRect, ~ , tolerance, newPosition, wellNum)
+    global artifactPixelIntensities artifactPixelCount artifactRatio meanIntensity stdIntensity;
+    
+    % Crop the well region from the image slice
+    wellImage = imcrop(imageSlice, wellRect);
+    
+    % Threshold for artifacts based on the mean and standard deviation
+    artifactThreshold = meanIntensity + tolerance * stdIntensity;
+
+    % Detect artifact pixels
+    artifactMask = wellImage > artifactThreshold;
+    artifactPixels = wellImage(artifactMask);
+
+    % Update the global variables for artifact analysis
+    artifactPixelIntensities = [artifactPixelIntensities; artifactPixels(:)];  % Append the intensities
+    artifactPixelCount = artifactPixelCount + numel(artifactPixels);  % Update the pixel count
+
+    % Calculate the ratio of artifact pixels to the total well pixels
+    artifactRatioWell = sum(artifactMask(:)) / numel(wellImage);
+
+    % Visualization
+    wellOverlay = overlayBoundaries(wellImage, artifactMask);
+
+    % Display the result for the current well
+    hFig = figure('Name', ['Artifacts in Well ' num2str(wellNum)]);
+    imshow(wellOverlay);
+    set(hFig, 'Position', newPosition); % Make the figure full screen
+    title(sprintf('Well %d', wellNum));
 end
 
 function imgRGB = overlayBoundaries(horizontalImage, artifactMask)
@@ -249,8 +316,8 @@ end
 
 
 % Slider callback simplified
-function displaySliceCallback(hFig, sliceNum, dim, choice)
-    displaySlice(hFig, sliceNum, dim, choice);
+function displaySliceCallback(hFig, sliceNum, dim, plane)
+    displaySlice(hFig, sliceNum, dim, plane);
 end
 
 % Function to process the current slice, disable the slider, and close the figure
@@ -265,15 +332,15 @@ function processCurrentSlice(hFig)
 end
 
 % Function to update and display the selected slice
-function displaySlice(hFig, sliceNum, dim, choice)
+function displaySlice(hFig, sliceNum, dim, plane)
     data = get(hFig, 'UserData');
-    if choice == 1
+    if plane == 1
         horizontal = data.Va_prime(:,:,sliceNum);
         rotate = -90;
-    elseif choice == 2
+    elseif plane == 2
         horizontal = reshape(data.Va_prime(sliceNum,:,:), [dim(2) dim(3)]);
         rotate = 0;
-    elseif choice == 3
+    elseif plane == 3
         horizontal = reshape(data.Va_prime(:,sliceNum,:), [dim(1) dim(3)]);
         rotate = 90;
     end
@@ -340,77 +407,10 @@ function processNormalROICallback(src, ~, horizontalImage, hFig, totalPixels, to
     
     % Calculate mean intensity and standard deviation within the normal brain tissue ROI
     roiNormalValues = horizontalImage(roiNormal);
-    meanIntensity = mean(roiNormalValues);
-    %meanIntensity = 0.229251282051282; % mean of the plate grey borders
-    stdIntensity = std(double(roiNormalValues));
-    %stdIntensity = 0.051493981153738; % std of the plate grey borders
-   
-    
-    % Now, prompt the user to draw the area where they believe an artifact is located
-    title('Outline the entire brain structure');
-    hArtifact = drawfreehand('Color', 'b');
-
-    % Create the "Process" button which, when clicked, will resume execution
-    hButton2 = uicontrol('Style', 'pushbutton', 'String', 'Process', ...
-        'Position', [20 20 100 30], 'Callback', @processArtifactArea);
-
-    % Proceed with the callback logic
-    artifactPos = round(hArtifact.Position);
-    set(hButton2, 'UserData', struct('hFig', hFig, 'hArtifact', hArtifact, 'artifactPos', artifactPos));
-
-    % Pause script execution waiting for user to process the artifact area
-    uiwait(gcf);  % Wait for the current figure to be processed
-
-    % Finding the artifact in the image
-    artifactPos = round(hArtifact.Position);
-    roiArtifact = roipoly(horizontalImage, artifactPos(:,1), artifactPos(:,2));
-    lowerThreshold = meanIntensity - tolerance * stdIntensity;
-    upperThreshold = meanIntensity + tolerance * stdIntensity;
-    roiArtifactPixels = horizontalImage(roiArtifact);
-    isArtifactWithinROI = (roiArtifactPixels < lowerThreshold) | (roiArtifactPixels > upperThreshold);
-    artifactMask = false(size(horizontalImage));
-    artifactMask(roiArtifact) = isArtifactWithinROI;
-
-    % Quantifying the artifact
-    artifactRatio = (sum(artifactMask(:) == 1) / totalPixels) * 1000; % Defined as how many artifact pixel over total pixels in the entire image (in kilopixels)
-
-    % Retrieve artifact position from the UserData of the button
-    userData = get(hButton2, 'UserData');
-    artifactPos = userData.artifactPos;
-    x_artifact = artifactPos(:,1);
-    y_artifact = artifactPos(:,2);
-    roiArtifact = roipoly(horizontalImage, x_artifact, y_artifact);
-
-    % Define thresholds for detecting artifacts
-    lowerThreshold = meanIntensity - tolerance * stdIntensity;
-    upperThreshold = meanIntensity + tolerance * stdIntensity;
-
-    % Extract the pixel values within the freehand ROI
-    roiArtifactPixels = horizontalImage(roiArtifact);
-    
-    % Apply threshold only within the ROI to identify artifacts
-    isArtifactWithinROI = (roiArtifactPixels < lowerThreshold) | (roiArtifactPixels > upperThreshold);
-
-    % Now create a new binary image with the size of the original image
-    artifactMask = false(size(horizontalImage));
-
-    % Set the identified artifact pixels within the ROI in the new binary image
-    artifactMask(roiArtifact) = isArtifactWithinROI;
-
-    % Quantifying the artifact
-    artifactRatio = (sum(artifactMask(:) == 1)/totalPixels)*1000; % Defined as how many artifact pixel over total pixels in the entire image (in kilopixels)
-
-    % Overlay ROI and artifact boundaries on the original image
-    overlayImage = overlayBoundaries(horizontalImage, artifactMask);
-    
-    % Close the figure
-    close(gcf);
-    
-    % Display the image with overlays
-    overlay= figure();
-    imshow(overlayImage);
-    set(overlay, 'Position', newPosition); % Make the figure full screen
-    title('Original Image with Artifact Overlay');
+   % meanIntensity = 0;
+    meanIntensity = 0.320909645909646;
+    %stdIntensity = 0;
+    stdIntensity = 0.004835688973947;
     
     % Resume execution of the MATLAB script
     if isvalid(hFig)

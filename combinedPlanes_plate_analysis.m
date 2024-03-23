@@ -7,10 +7,10 @@ file = 'IMAGES_High_Def_20240227161441_2.nii';
 tolerance = 3; % How many std deviations away from mean to be labeled as an artifact
 
 frontalWellNumber = 1;
-sagittalWellNumber = 6;
+sagittalWellNumber = 5;
 
 %% PROGRAM
-global artifactPixelIntensities artifactPixelCount artifactRatio meanIntensity stdIntensity;
+global artifactPixelIntensities artifactPixelCount meanIntensity stdIntensity;
 artifactPixelIntensities = [];
 artifactPixelCount = 0;
 meanIntensity = 0.320909645909646;
@@ -127,7 +127,7 @@ switch choice
         sliceZ = finalslice;
 
          end
-
+         clc;
          meanArtifactIntensity = mean(artifactPixelIntensities);
          fprintf('Mean artifact intensity: %f\n', meanArtifactIntensity);
 
@@ -198,7 +198,7 @@ switch choice
 
     sliceX = finalslice;
         end
-
+clc;
 meanArtifactIntensity = mean(artifactPixelIntensities);
 fprintf('Mean artifact intensity: %f\n', meanArtifactIntensity);
 
@@ -262,7 +262,7 @@ fprintf('Mean artifact intensity: %f\n', meanArtifactIntensity);
 end
 
 function processWell(imageSlice, wellRect, ~ , tolerance, newPosition, wellNum)
-    global artifactPixelIntensities artifactPixelCount artifactRatio meanIntensity stdIntensity;
+    global artifactPixelIntensities artifactPixelCount meanIntensity stdIntensity;
     
     % Crop the well region from the image slice
     wellImage = imcrop(imageSlice, wellRect);
@@ -277,9 +277,6 @@ function processWell(imageSlice, wellRect, ~ , tolerance, newPosition, wellNum)
     % Update the global variables for artifact analysis
     artifactPixelIntensities = [artifactPixelIntensities; artifactPixels(:)];  % Append the intensities
     artifactPixelCount = artifactPixelCount + numel(artifactPixels);  % Update the pixel count
-
-    % Calculate the ratio of artifact pixels to the total well pixels
-    artifactRatioWell = sum(artifactMask(:)) / numel(wellImage);
 
     % Visualization
     wellOverlay = overlayBoundaries(wellImage, artifactMask);
@@ -353,13 +350,6 @@ function displaySlice(hFig, sliceNum, dim, plane)
     set(hFig, 'UserData', data);
 end
 
-% Callback function to close the "Draw ROI" figure
-function closeDrawROIFigure(hRect)
-    if isvalid(hRect)
-        close(gcf); % Close the current figure
-    end
-end
-
 % Callback function for mouse scroll wheel event
 function scrollWheelCallback(src, event, hSlider, choice)
     % Get the current slice from the slider
@@ -378,42 +368,4 @@ function scrollWheelCallback(src, event, hSlider, choice)
     % Set the new slice value to the slider and update the display
     set(hSlider, 'Value', newSlice);
     displaySlice(src, newSlice, size(get(src, 'UserData').Va_prime), choice);
-end
-
-% Function to be called when "Process" button is clicked
-function processArtifactArea(src, ~)
-    % Retrieve handles from the button's 'UserData'
-    userData = get(src, 'UserData');
-    hFig = userData.hFig;
-    
-    % Resume execution to continue with the analysis
-    uiresume(hFig);
-end
-
-% Callback function to process the normal brain tissue ROI
-function processNormalROICallback(src, ~, horizontalImage, hFig, totalPixels, tolerance, newPosition)
-    global artifactRatio meanIntensity stdIntensity;
-    
-    % Retrieve hFreehandNormal from the UserData property of the src (button)
-    hFreehand = get(src, 'UserData');
-    
-    % Proceed with the callback logic
-    pos = round(hFreehand.Position);
-    x = pos(:,1);
-    y = pos(:,2);
-    
-    % Extract the normal brain tissue ROI from the horizontal image
-    roiNormal = roipoly(horizontalImage, x, y);
-    
-    % Calculate mean intensity and standard deviation within the normal brain tissue ROI
-    roiNormalValues = horizontalImage(roiNormal);
-   % meanIntensity = 0;
-    meanIntensity = 0.320909645909646;
-    %stdIntensity = 0;
-    stdIntensity = 0.004835688973947;
-    
-    % Resume execution of the MATLAB script
-    if isvalid(hFig)
-        uiresume(hFig);
-    end
 end

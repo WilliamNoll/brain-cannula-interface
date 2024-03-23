@@ -6,7 +6,7 @@ clc;
 file = 'IMAGES_High_Def_20240227161441_2.nii';
 tolerance = 3; % How many std deviations away from mean to be labeled as an artifact
 
-frontalWellNumber = 1;
+frontalWellNumber = 4;
 sagittalWellNumber = 5;
 
 %% PROGRAM
@@ -71,11 +71,12 @@ switch choice
             [388, 247, 425 - 388, 293 - 247]; % Well 3
             [434, 247, 472 - 434, 293 - 247]; % Well 4
             };
-        sliceZ = 310;
+        sliceZ = 260;
         userDone = false;
         plane = 1;
+        j = 1;
 
-         while ~userDone
+        while ~userDone
         % Ensure all GUI components are set up correctly
         hFig = figure('Name', 'MRI Slice Viewer', 'NumberTitle', 'off');
         set(hFig, 'Position', newPosition); % Make the figure full screen
@@ -119,6 +120,7 @@ switch choice
         switch choice
             case 'Yes'
                 userDone = false;
+                j = j+1;
             case 'No'
                 userDone = true;
             otherwise
@@ -126,11 +128,13 @@ switch choice
         end
         sliceZ = finalslice;
 
-         end
+        end
          clc;
          meanArtifactIntensity = mean(artifactPixelIntensities);
          fprintf('Mean artifact intensity: %f\n', meanArtifactIntensity);
-         fprintf('Number of Pixels: %f\n', artifactPixelCount);
+         fprintf('Number of Pixels: %d\n', artifactPixelCount);
+         fprintf('Number of Pixels/Slice: %f\n', artifactPixelCount/j);
+
 
     case 2
         % Code for Sagittal
@@ -146,6 +150,7 @@ switch choice
         sliceX = 200;
         userDone = false;
         plane = 2;
+        j = 1;
         
         while ~userDone
         % Ensure all GUI components are set up correctly
@@ -191,6 +196,7 @@ switch choice
     switch choice
         case 'Yes'
             userDone = false;
+            j = j+1;
         case 'No'
             userDone = true;
         otherwise
@@ -199,11 +205,12 @@ switch choice
 
     sliceX = finalslice;
         end
-clc;
-meanArtifactIntensity = mean(artifactPixelIntensities);
+        clc;
+        meanArtifactIntensity = mean(artifactPixelIntensities);
 
-fprintf('Number of Pixels: %d\n', artifactPixelCount);
-fprintf('Mean artifact intensity: %f\n', meanArtifactIntensity);
+        fprintf('Mean artifact intensity: %f\n', meanArtifactIntensity);
+        fprintf('Number of Pixels: %d\n', artifactPixelCount);
+        fprintf('Number of Pixels/Slice: %f\n', artifactPixelCount/j);
 
     case 3
         % Code for Horizontal

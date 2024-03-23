@@ -6,8 +6,8 @@ clc;
 file = 'IMAGES_High_Def_20240227161441_2.nii';
 tolerance = 3; % How many std deviations away from mean to be labeled as an artifact
 
-sagittalWellNumber = 4;
-frontalWellNumber = 3;
+frontalWellNumber = 1;
+sagittalWellNumber = 1;
 
 %% PROGRAM
 global artifactPixelIntensities artifactPixelCount artifactRatio meanIntensity stdIntensity;
@@ -133,12 +133,12 @@ switch choice
     case 2
         % Code for Sagittal
         sagittalWellCoords = {
-            [61, 246, 89 - 61, 285 - 246];    % Well 1  0 mg/ml
-            [109, 246, 141 - 109, 285 - 246]; % Well 2 17 mg/ml
-            [156, 246, 187 - 156, 285 - 246]; % Well 3 34 mg/ml
+            [58, 246, 95 - 55, 288 - 246];    % Well 1  0 mg/ml
+            [104, 246, 144 - 104, 288 - 246]; % Well 2 17 mg/ml
+            [156, 246, 187 - 156, 288 - 246]; % Well 3 34 mg/ml
             [198, 246, 234 - 198, 289 - 246]; % Well 4 51 mg/ml
-            [249, 246, 279 - 249, 285 - 246]; % Well 5 68 mg/ml
-            [294, 246, 326 - 294, 285 - 246]; % Well 6 85 mg/ml
+            [249, 246, 279 - 249, 288 - 246]; % Well 5 68 mg/ml
+            [294, 246, 326 - 294, 288 - 246]; % Well 6 85 mg/ml
             };
 
         sliceX = 102;

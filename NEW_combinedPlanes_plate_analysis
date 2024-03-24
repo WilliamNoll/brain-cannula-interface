@@ -6,7 +6,7 @@ clc;
 file = 'IMAGES_High_Def_20240227161441_2.nii';
 tolerance = 3; % How many std deviations away from mean to be labeled as an artifact
 
-frontalWellNumber = 3;
+frontalWellNumber = 1;
 sagittalWellNumber = 5;
 
 %% PROGRAM
@@ -278,7 +278,8 @@ end
 
 function processWell(horizontal, wellRect, tolerance, newPosition, wellNum)
     global artifactPixelIntensities artifactPixelCount meanIntensity stdIntensity;
-    
+
+    close all;
     % Crop the well region from the image slice
     wellImage = imcrop(horizontal, wellRect);
     
@@ -292,6 +293,15 @@ function processWell(horizontal, wellRect, tolerance, newPosition, wellNum)
     % Update the global variables for artifact analysis
     artifactPixelIntensities = [artifactPixelIntensities; artifactPixels(:)];  % Append the intensities
     artifactPixelCount = artifactPixelCount + numel(artifactPixels);  % Update the pixel count
+
+    % Visualization
+    wellOverlay = overlayBoundaries(wellImage, artifactMask);
+
+    % Display the result for the current well
+    hFig = figure('Name', ['Artifacts in Well ' num2str(wellNum)]);
+    imshow(wellOverlay);
+    set(hFig, 'Position', newPosition); % Make the figure full screen
+    title(sprintf('Well %d', wellNum));
 end
 
 function imgRGB = overlayBoundaries(horizontalImage, artifactMask)
